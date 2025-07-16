@@ -1,0 +1,218 @@
+# HTHTA-ViT++ Configuration for CIFAR-100
+# This configuration file contains all the parameters needed to train and evaluate
+# the HTHTA-ViT++ model on the CIFAR-100 dataset
+
+# Model Architecture Configuration
+model:
+  name: "hthta_vit_plus_plus"
+  
+  # Vision Transformer Backbone
+  backbone:
+    model_name: "vit_base_patch16_224"
+    embed_dim: 768
+    num_heads: 12
+    num_layers: 12
+    patch_size: 16
+    img_size: 224
+    dropout: 0.1
+    attention_dropout: 0.1
+    drop_path_rate: 0.1
+    
+  # Bidirectional GRU Configuration
+  bigru:
+    num_layers: 2
+    hidden_size: 768
+    dropout: 0.1
+    bidirectional: true
+    
+  # Multi-Head Attention Pooling
+  attention_pooling:
+    num_heads: 8
+    context_dim: 96
+    dropout: 0.1
+    
+  # Hierarchical CLS-Token Fusion
+  cls_fusion:
+    gamma: 0.5
+    beta: 0.3
+    learnable_params: true
+    
+  # Classification Head
+  classifier:
+    num_classes: 100
+    dropout: 0.1
+
+# Dataset Configuration
+dataset:
+  name: "cifar100"
+  root: "./data"
+  download: true
+  
+  # Data preprocessing
+  preprocessing:
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+    resize: 224
+    
+  # Data augmentation
+  augmentation:
+    train:
+      - type: "RandomResizedCrop"
+        size: 224
+        scale: [0.8, 1.0]
+      - type: "RandomHorizontalFlip"
+        p: 0.5
+      - type: "ColorJitter"
+        brightness: 0.2
+        contrast: 0.2
+        saturation: 0.2
+        hue: 0.1
+      - type: "RandomRotation"
+        degrees: 15
+      - type: "Normalize"
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+        
+    test:
+      - type: "Resize"
+        size: 224
+      - type: "CenterCrop"
+        size: 224
+      - type: "Normalize"
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+
+# Training Configuration
+training:
+  epochs: 30
+  batch_size: 32
+  num_workers: 8
+  pin_memory: true
+  
+  # Optimizer
+  optimizer:
+    name: "AdamW"
+    lr: 2e-5
+    weight_decay: 0.01
+    betas: [0.9, 0.999]
+    eps: 1e-8
+    
+  # Learning Rate Scheduler
+  scheduler:
+    name: "CosineAnnealingLR"
+    T_max: 30
+    eta_min: 1e-6
+    
+  # Warmup
+  warmup:
+    enabled: true
+    steps: 500
+    start_lr: 1e-6
+    
+  # Mixed Precision Training
+  mixed_precision:
+    enabled: true
+    
+  # Gradient Clipping
+  gradient_clipping:
+    enabled: true
+    max_norm: 1.0
+    
+  # Early Stopping
+  early_stopping:
+    enabled: true
+    patience: 10
+    min_delta: 0.001
+    
+  # Model Checkpointing
+  checkpointing:
+    save_top_k: 3
+    monitor: "val_accuracy"
+    mode: "max"
+    save_last: true
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1_score"
+    - "confusion_matrix"
+    - "fap_score"
+    
+  # Focused Attention Percentage (FAP) Configuration
+  fap:
+    top_percentile: 15
+    use_gradcam: true
+    gradcam_layer: "blocks.11.attn"
+    
+  # Visualization
+  visualization:
+    enabled: true
+    save_attention_maps: true
+    num_samples: 100
+    
+# Logging Configuration
+logging:
+  # Experiment tracking
+  experiment_name: "hthta_vit_cifar100"
+  project_name: "hthta-vit-plus-plus"
+  
+  # Wandb configuration
+  wandb:
+    enabled: true
+    entity: "your_wandb_entity"
+    project: "hthta-vit-plus-plus"
+    
+  # TensorBoard configuration
+  tensorboard:
+    enabled: true
+    log_dir: "./logs/tensorboard"
+    
+  # Console logging
+  console:
+    level: "INFO"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    
+  # File logging
+  file:
+    enabled: true
+    log_dir: "./logs"
+    level: "DEBUG"
+
+# Hardware Configuration
+hardware:
+  device: "cuda"
+  gpu_ids: [0]
+  distributed: false
+  
+  # Multi-GPU training
+  multi_gpu:
+    enabled: false
+    strategy: "ddp"
+    
+# Reproducibility
+reproducibility:
+  seed: 42
+  deterministic: true
+  benchmark: false
+
+# Paths
+paths:
+  data_root: "./data"
+  checkpoint_dir: "./checkpoints"
+  log_dir: "./logs"
+  results_dir: "./results"
+  
+# Inference Configuration
+inference:
+  batch_size: 64
+  num_workers: 4
+  
+# Export Configuration
+export:
+  formats: ["onnx", "torchscript"]
+  quantization:
+    enabled: false
+    method: "dynamic"
